@@ -1,6 +1,6 @@
 mod plugins;
 
-use crate::plugins::init;
+use crate::plugins::loader::init;
 
 use std::path::Path;
 

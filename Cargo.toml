@@ -9,5 +9,6 @@ edition = "2021"
 [dependencies]
 anigo = { branch = "main", git = "https://github.com/anigo-org/anigo-plugin-model", package = "anigo-plugin-model" }
 
+inquire = { version = "0.5.2", features = ["date"] }
 libloading = "0.7"
 walkdir = "2"
