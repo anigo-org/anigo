@@ -1,2 +1,8 @@
+# Build
 target/
+
+# Plugins
 anigo/
+
+*.so
+*.d

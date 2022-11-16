@@ -1,35 +1,24 @@
-use std::{env, fmt, fs, path::Path};
+mod plugins;
 
-use libloading::{Library, Symbol};
+use crate::plugins::init;
 
-use anigo::Plugin;
+use std::path::Path;
 
-fn open(path: String) -> Result<(), libloading::Error> {
-    println!("0");
-    unsafe {
-        let lib: Library = Library::new(path)?;
+use anigo::{Provider, Worker};
 
-        println!("1");
-
-        let plugin: Symbol<&'static Plugin> = lib.get(b"PLUGIN")?;
-
-        println!("2");
-
-        println!("{}", plugin.name);
-    };
-
-    Ok(())
+pub struct Core {
+    pub providers: Vec<&'static dyn Provider>,
+    pub workers: Vec<&'static dyn Worker>,
 }
 
+pub static mut CORE: Core = Core {
+    providers: Vec::new(),
+    workers: Vec::new(),
+};
+
 fn main() {
-    let p = Path::new(".").join("anigo/plugins/plugin.so");
-    let pa = p.to_str();
+    let path = Path::new(".").join("anigo").join("plugins");
+    let path = path.to_str().unwrap();
 
-    /*let path = Path::new(".")
-    .join("anigo")
-    .join("plugins")
-    .join("plugin.so")
-    .to_str();*/
-
-    println!("{:#?}", open("./libanigo_consumet_plugin.so".to_string()));
+    println!("{:#?}", init(path));
 }
