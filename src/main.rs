@@ -1,24 +1,23 @@
-mod plugins;
+pub mod plugin;
 
-use crate::plugins::loader::init;
+use std::error::Error;
 
-use std::path::Path;
+use anigo::{runtime::Runtime, Func};
 
-use anigo::{Provider, Worker};
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let mut life_cycle: Vec<Func> = Vec::new();
 
-pub struct Core {
-    pub providers: Vec<&'static dyn Provider>,
-    pub workers: Vec<&'static dyn Worker>,
-}
+    life_cycle.push(plugin::init);
+    life_cycle.push(plugin::main);
 
-pub static mut CORE: Core = Core {
-    providers: Vec::new(),
-    workers: Vec::new(),
-};
+    let mut runtime: Runtime = Runtime::new(life_cycle);
 
-fn main() {
-    let path = Path::new(".").join("anigo").join("plugins");
-    let path = path.to_str().unwrap();
+    runtime.set("library-path", "plugins");
 
-    println!("{:#?}", init(path));
+    for func in runtime.life_cycle.clone() {
+        func(&mut runtime)?;
+    }
+
+    Ok(())
 }

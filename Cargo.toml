@@ -7,8 +7,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anigo = { branch = "main", git = "https://github.com/anigo-org/anigo-plugin-model", package = "anigo-plugin-model" }
-
 inquire = { version = "0.5.2", features = ["date"] }
 libloading = "0.7"
 walkdir = "2"
+
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+anigo = { path = "../anigo-plugin-model", package = "anigo-plugin-model" }
