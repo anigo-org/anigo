@@ -13,3 +13,4 @@ walkdir = "2"
 
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 anigo = { path = "../anigo-plugin-model", package = "anigo-plugin-model" }
+serde_json = "1.0"
