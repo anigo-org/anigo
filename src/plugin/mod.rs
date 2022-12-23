@@ -1,10 +1,19 @@
-use std::{error::Error, env, process};
+use std::{env, error::Error};
 
-use anigo::{runtime::{Runtime, Specialty}, plugin, Func};
+use anigo::Core;
+use serde_json::Value;
 use walkdir::WalkDir;
 
-pub fn init(runtime: &mut Runtime) -> Result<(), Box<dyn Error>> {
-    let path = runtime.get_data("plugin-folder-path").as_str().unwrap();
+pub fn init<T>(core: &mut Core) -> Result<Vec<(&'static libloading::Library, T)>, Box<dyn Error>>
+where
+    T: Clone,
+{
+    let alt_path = Value::String("plugins".to_string());
+
+    let path = core.get("plugin-path").unwrap_or(alt_path);
+    let path = path.as_str().unwrap();
+
+    let mut exports = Vec::new();
 
     for entry in WalkDir::new(path) {
         let entry = entry?;
@@ -16,34 +25,21 @@ pub fn init(runtime: &mut Runtime) -> Result<(), Box<dyn Error>> {
             continue;
         }
 
-        runtime.load_plugin(path)?;
+        println!("0-3");
+
+        let library = core.load_library(path).unwrap();
+
+        
+        println!("0-4");
+
+        exports.push((
+            library,
+            core.load_library_content_from::<T, &str>("init", library)
+                .unwrap(),
+        ));
+
+        println!("0-5");
     }
 
-    Ok(())
-}
-
-use inquire;
-
-pub fn main(r: &mut Runtime) -> Result<(), Box<dyn Error>> {
-    let target: Box<dyn Specialty> = Box::new(plugin::Specialty::Controller); 
-    let mut controllers: Vec<(&str, Func)> = Vec::new();
-    controllers.push(("Exit", |_| {
-        process::exit(1)
-    }));
-
-    for plugin in r.get_plugins() {
-        for addon in plugin.1.iter() {
-            if *addon.specialty != *target { continue }
-
-            let controller: Func = r.load_plugin_content(plugin.0, addon.symbol)?;
-
-            controllers.push((addon.name, controller));
-        }
-    }
-
-    let c = controllers.into_iter().map(|(name, _)| name).collect::<Vec<&str>>();
-
-    inquire::Select::new("Select a controller", c).prompt()?;
-
-    Ok(())
+    Ok(exports)
 }
