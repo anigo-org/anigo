@@ -1,80 +1,109 @@
-use std::{error::Error, ffi::OsStr, mem::transmute, ops::Deref};
+use std::{ffi::OsStr, ops::Deref};
 
 use libloading::Library;
 
-use crate::{specialty, Core, ManagerCycle, Manager};
+use crate::{specialty::{self, Specialty}, Core, SharedLibrary};
 
 impl Core {
-    pub fn load_library_content_from<T, Y>(
-        &self,
-        sym: Y,
-        lib: &'static libloading::Library,
-    ) -> Result<T, Box<dyn Error + '_>>
+    pub fn load_scontent<T, Y>(lib: &libloading::Library, sym: Y) -> Result<T, libloading::Error>
     where
         T: Clone,
         Y: AsRef<str>,
     {
-        let sym = sym.as_ref();
+        let data = unsafe { lib.get::<T>(sym.as_ref().as_bytes())? };
+        let data = data.deref().clone();
 
-        println!("{:#?}", lib.to_owned());
-
-        let res = unsafe { lib.get::<T>(b"init") };
-
-        println!("1");
-        println!("{:#?}", res);
-
-        let val = res?.deref().clone();
-
-        Ok(val)
+        Ok(data)
     }
 
-    pub fn load_library_content<T>(
-        &self,
-        specs: &'static [&'static dyn specialty::Specialty],
-    ) -> Result<Vec<T>, Box<dyn Error + '_>>
-    where
-        T: Clone,
-    {
-        let components = self.components.lock()?;
-
-        let components = components.iter().map(|element| {
-            let data = element
-                .data
-                .iter()
-                .filter(|comp| comp.specialties.iter().all(|spec| specs.contains(spec)));
-
-            (element.library, data)
-        });
-
-        let components = components.map(|(lib, data)| {
-            data.map(|i1| Ok(self.load_library_content_from(i1.name, lib)?))
-        });
-
-        let components = components
-            .flatten()
-            .collect::<Result<Vec<T>, Box<dyn Error + '_>>>()?;
-
-        Ok(components)
-    }
-
-    pub fn load_library<T>(
-        &mut self,
-        path: T,
-    ) -> Result<&'static libloading::Library, Box<dyn Error + '_>>
+    pub fn load_slibrary<T>(path: T) -> Result<libloading::Library, libloading::Error>
     where
         T: AsRef<OsStr>,
     {
-        self._libraries.push(unsafe {
-            libloading::Library::new(path.as_ref())?
-        });
-
-        Ok(self._libraries.last().unwrap())
+        unsafe { Library::new(path.as_ref()) }
     }
-
 }
 
 impl Core {
-    pub fn get_libraries(&self) -> Vec<&'static libloading::Library> {
-        self.libraries.lock().unwrap().clone()
+    pub fn load_content<T>(&self, specs: &'static [&'static dyn specialty::Specialty]) -> Vec<T>
+    where
+        T: Clone,
+    {
+        //let components = self.libraries.iter();
+
+        let a: &dyn Specialty = &specialty::Component::Controller;
+        let b: &[&dyn Specialty] = &[&specialty::Component::Controller];
+
+        println!(
+            "{:#?}", std::mem::size_of_val(&a)
+        );
+
+        println!(
+            "{:#?}", std::mem::size_of_val(&b)
+        );
+
+        //for c in b.to_vec() {
+            if b.last().unwrap() == &a {
+                println!("1");
+            }
+        //}
+
+        /*let libraries = components.map(|lib| {
+            let shared = lib.shared.iter();
+
+            let filtered = shared.filter(|value| {
+                //let mut iter = value.specialties.iter();
+                /*println!("3");
+                //iter.all(|e| specs.contains(e))
+                iter.last().unwrap() == specs.last().unwrap()*/
+
+                /*let a: &dyn Specialty = &specialty::Component::Controller;
+                let b: &[&dyn Specialty] = &[&specialty::Component::Controller];
+
+                for spec in specs {
+                    if !b.contains(
+        &a
+                    ) {
+                        println!("{:#?}", value.specialties);
+                        return false;
+                    }
+                }*/
+
+                true
+            });
+
+            let loaded = filtered.map(|value| Box::new(Self::load_scontent::<T, _>(&lib.file, &value.name)));
+
+            let loaded = loaded
+                .filter(|value| value.is_ok())
+                .map(|value| value.unwrap());
+
+            println!("{:#?}", loaded);
+
+            loaded
+                .collect::<Vec<T>>()
+
+        });
+
+        libraries.flatten().collect::<Vec<_>>()*/
+        Vec::new()
+    }
+
+    pub fn load_library<T>(&mut self, path: T) -> Result<&SharedLibrary, libloading::Error>
+    where
+        T: AsRef<OsStr>,
+    {
+        let library = Self::load_slibrary(path)?;
+        let shared = SharedLibrary::new(library);
+
+        self.libraries.push(shared);
+
+        Ok(self.libraries.last().unwrap())
+    }
+}
+
+impl Core {
+    pub fn get_libraries(&self) -> &Vec<SharedLibrary> {
+        &self.libraries
     }
 }

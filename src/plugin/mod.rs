@@ -1,45 +1,40 @@
-use std::{env, error::Error};
+use std::{
+    env,
+    error::Error,
+    path::PathBuf,
+    sync::{Arc, Mutex, MutexGuard},
+};
 
 use anigo::Core;
-use serde_json::Value;
 use walkdir::WalkDir;
 
-pub fn init<T>(core: &mut Core) -> Result<Vec<(&'static libloading::Library, T)>, Box<dyn Error>>
+pub fn init<T>(core: Arc<Mutex<Core>>, path: PathBuf, symbol: T) -> Result<(), Box<dyn Error>>
 where
-    T: Clone,
+    T: AsRef<str>,
 {
-    let alt_path = Value::String("plugins".to_string());
-
-    let path = core.get("plugin-path").unwrap_or(alt_path);
-    let path = path.as_str().unwrap();
-
-    let mut exports = Vec::new();
-
     for entry in WalkDir::new(path) {
         let entry = entry?;
 
-        let name = entry.file_name().to_str().unwrap();
+        let filename = entry.file_name().to_str().unwrap();
         let path = entry.path();
 
-        if path.is_dir() || !name.ends_with(env::consts::DLL_EXTENSION) {
+        if path.is_dir() || !filename.ends_with(env::consts::DLL_EXTENSION) {
             continue;
         }
 
-        println!("0-3");
+        let core = Arc::clone(&core);
+        let mut core = core.lock().unwrap();
 
-        let library = core.load_library(path).unwrap();
-
-        
-        println!("0-4");
-
-        exports.push((
-            library,
-            core.load_library_content_from::<T, &str>("init", library)
-                .unwrap(),
-        ));
-
-        println!("0-5");
+        match core.load_library(path) {
+            Ok(shared) => {
+                match Core::load_scontent::<fn(MutexGuard<Core>), _>(&shared.file, &symbol) {
+                    Err(e) => println!("Failed to load library: {}\n{}", filename, e),
+                    Ok(e) => e(core),
+                }
+            }
+            Err(e) => println!("Failed to load library: {}\n{}", filename, e),
+        }
     }
 
-    Ok(exports)
+    Ok(())
 }

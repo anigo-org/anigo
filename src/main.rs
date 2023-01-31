@@ -1,58 +1,53 @@
 pub mod plugin;
 
-use std::{env, error::Error, fs::create_dir_all};
+use std::{
+    cell::RefCell,
+    env,
+    error::Error,
+    fs::create_dir_all,
+    future::Future,
+    rc::Rc,
+    sync::{Arc, Mutex},
+};
 
-use anigo::{self, specialty, Core, Manager, ManagerCycle};
-use serde_json::Value;
+use anigo::{self, specialty, Core};
 
-fn init(core: &mut Core) -> Result<(), Box<dyn Error>> {
+fn init(core: Arc<Mutex<Core>>) -> Result<(), Box<dyn Error>> {
     let proyect_path = env::current_dir()?.join("anigo");
     let plugin_path = proyect_path.join("plugins");
 
-    core.set(
-        "proyect-path",
-        Value::String(proyect_path.to_str().unwrap().to_string()),
-    );
+    create_dir_all(&plugin_path)?;
 
-    core.set(
-        "plugin-path",
-        Value::String(plugin_path.to_str().unwrap().to_string()),
-    );
-
-    create_dir_all(plugin_path)?;
-
-    let plugins = plugin::init::<fn ()>(core)?;
-
-    for (lib, init) in plugins {
-        init();
-    }
+    plugin::init(core, plugin_path, "init")?;
 
     Ok(())
 }
 
+use std::backtrace::Backtrace;
+
 fn main() -> Result<(), Box<dyn Error>> {
-    let core = &mut Core::new();
+    env::set_var("RUST_BACKTRACE", "FULL");
+    //let bt = Backtrace::capture();
 
-    println!("0");
+    let core = Arc::new(Mutex::new(Core::new()));
 
-    init(core)?;
+    println!("{}", 1);
 
-    println!("1");
+    // Initialize plugins.
+    init(Arc::clone(&core))?;
 
-    let controllers = core.get_components(Some(&[&specialty::Component::Controller]));
+    let c = core.lock().unwrap();
 
-    println!("2");
+    let data = c.load_content::<fn(Arc<Mutex<Core>>)>(&[&specialty::Component::Controller]);
+    drop(c);
 
-    let names = controllers
-        .iter()
-        .map(|x| x.name)
-        .collect::<Vec<&'static str>>();
 
-    println!("3");
+    // I have only testing if works.
+    for entry in data {
+        entry(Arc::clone(&core));
+    }
 
-    let resp = inquire::Select::new("", names).prompt()?;
-
-    println!("You selected: {}", resp);
+    //println!("{:?}", bt);
 
     Ok(())
 }

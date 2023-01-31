@@ -1,9 +1,9 @@
 use std::fmt::Debug;
-
 pub trait Specialty: Debug {}
 
 impl PartialEq for dyn Specialty {
     fn eq(&self, other: &Self) -> bool {
+        println!("{}", 2);
         self == other
     }
 
@@ -11,6 +11,8 @@ impl PartialEq for dyn Specialty {
         self != other
     }
 }
+
+impl Eq for dyn Specialty {}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Dependency {
@@ -21,6 +23,7 @@ pub enum Dependency {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Component {
     Controller,
+    Memory,
     Solver,
 }
 
