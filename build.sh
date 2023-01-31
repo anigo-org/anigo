@@ -1,14 +1,14 @@
 #!/usr/bin/sh
 
-#clear
+clear
 
-#cargo build
+cargo build
 
-#mkdir -p anigo/plugins
-#mv target/debug/libanigo.so anigo/plugins/libanigo.so
+mkdir -p anigo/plugins
+mv target/debug/libanigo.so anigo/plugins/libanigo.so
 
-#cargo run
+cargo run
 
-RUST_BACKTRACE=1
-printf "$RUST_BACKTRACE\n"
-cargo run --release
+#RUST_BACKTRACE=1
+#printf "$RUST_BACKTRACE\n"
+#cargo run --release

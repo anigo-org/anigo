@@ -26,7 +26,7 @@ fn init(core: Arc<Mutex<Core>>) -> Result<(), Box<dyn Error>> {
 use std::backtrace::Backtrace;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    env::set_var("RUST_BACKTRACE", "FULL");
+    env::set_var("RUST_BACKTRACE", "1");
     //let bt = Backtrace::capture();
 
     let core = Arc::new(Mutex::new(Core::new()));
